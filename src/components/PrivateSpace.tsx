@@ -1,17 +1,19 @@
 import { useState } from 'react'
 import type { AttemptRecord } from '../utils/storage'
 import { clearHistory } from '../utils/storage'
-import type { Profile } from '../utils/profiles'
-import { renameProfile } from '../utils/profiles'
-import { MENTION_LABELS } from '../types'
+import type { StudentProfile } from '../utils/auth'
+import type { Theme } from '../types'
+import { MENTION_LABELS, THEME_ICONS, THEME_LABELS } from '../types'
+
+const MIN_THEME_SAMPLE = 3
 
 interface Props {
-  profile: Profile
+  profile: StudentProfile
   history: AttemptRecord[]
   onBackHome: () => void
   onCleared: () => void
   onProfileRenamed: (name: string) => void
-  onSwitchProfile: () => void
+  onSignOut: () => void
 }
 
 export default function PrivateSpace({
@@ -20,15 +22,14 @@ export default function PrivateSpace({
   onBackHome,
   onCleared,
   onProfileRenamed,
-  onSwitchProfile,
+  onSignOut,
 }: Props) {
   const [editing, setEditing] = useState(false)
-  const [name, setName] = useState(profile.name)
+  const [name, setName] = useState(profile.display_name)
 
   function saveName() {
     const trimmed = name.trim()
     if (trimmed) {
-      renameProfile(profile.id, trimmed)
       onProfileRenamed(trimmed)
     }
     setEditing(false)
@@ -40,6 +41,22 @@ export default function PrivateSpace({
     (best, h) => (h.correct / h.total > best ? h.correct / h.total : best),
     0,
   )
+
+  const themeTotals: Partial<Record<Theme, { total: number; correct: number }>> = {}
+  history.forEach((h) => {
+    Object.entries(h.byTheme).forEach(([theme, stats]) => {
+      const t = theme as Theme
+      const entry = themeTotals[t] ?? { total: 0, correct: 0 }
+      entry.total += stats!.total
+      entry.correct += stats!.correct
+      themeTotals[t] = entry
+    })
+  })
+  const weakThemes = Object.entries(themeTotals)
+    .filter(([, stats]) => stats!.total >= MIN_THEME_SAMPLE)
+    .map(([theme, stats]) => ({ theme: theme as Theme, ...stats!, pct: stats!.correct / stats!.total }))
+    .sort((a, b) => a.pct - b.pct)
+    .slice(0, 3)
 
   return (
     <div className="stats-panel">
@@ -62,20 +79,23 @@ export default function PrivateSpace({
         ) : (
           <div className="profile-summary">
             <span className="profile-chip">
-              <span className="avatar">{profile.name.charAt(0).toUpperCase()}</span>
-              <strong>{profile.name}</strong>
+              <span className="avatar">{profile.display_name.charAt(0).toUpperCase()}</span>
+              <strong>{profile.display_name}</strong>
             </span>
             <button className="link-btn" onClick={() => setEditing(true)}>
               Renommer
             </button>
-            <button className="link-btn" onClick={onSwitchProfile}>
-              Changer d'espace
+            <button className="link-btn" onClick={onSignOut}>
+              Se déconnecter
             </button>
           </div>
         )}
         <p className="disclaimer small">
           <span className="disclaimer-icon">ℹ️</span>
-          <span>Cet espace n'existe que sur cet appareil et ce navigateur — rien n'est envoyé en ligne.</span>
+          <span>
+            Connecté en tant que <strong>{profile.email}</strong>. Votre progression est enregistrée sur
+            votre compte et accessible depuis n'importe quel appareil.
+          </span>
         </p>
       </div>
 
@@ -99,8 +119,29 @@ export default function PrivateSpace({
         </div>
       )}
 
+      {weakThemes.length > 0 && (
+        <div className="theme-breakdown">
+          <h2 className="weak-themes-title">🎯 Thèmes à travailler en priorité</h2>
+          {weakThemes.map(({ theme, correct, total, pct }) => (
+            <div key={theme} className="theme-row">
+              <div className="theme-row-head">
+                <span>
+                  {THEME_ICONS[theme]} {THEME_LABELS[theme]}
+                </span>
+                <span>
+                  {correct} / {total} ({Math.round(pct * 100)}%)
+                </span>
+              </div>
+              <div className="theme-row-bar">
+                <div className="theme-row-fill weak" style={{ width: `${Math.round(pct * 100)}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {history.length === 0 ? (
-        <p className="empty-state">📭 Aucune session enregistrée pour l'instant dans cet espace.</p>
+        <p className="empty-state">📭 Aucune session enregistrée pour l'instant.</p>
       ) : (
         <table className="stats-table">
           <thead>
@@ -129,8 +170,8 @@ export default function PrivateSpace({
         <button onClick={onBackHome}>Retour à l'accueil</button>
         {history.length > 0 && (
           <button
-            onClick={() => {
-              clearHistory(profile.id)
+            onClick={async () => {
+              await clearHistory(profile.id)
               onCleared()
             }}
           >

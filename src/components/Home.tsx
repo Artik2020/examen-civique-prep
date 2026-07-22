@@ -9,11 +9,21 @@ interface Props {
   onStartExam: (mention: Mention) => void
   onStartPractice: (mention: Mention, themes: Theme[]) => void
   onOpenSpace: () => void
+  onOpenAdmin: () => void
   counts: Record<Mention, number>
   profileName: string
+  isAdmin: boolean
 }
 
-export default function Home({ onStartExam, onStartPractice, onOpenSpace, counts, profileName }: Props) {
+export default function Home({
+  onStartExam,
+  onStartPractice,
+  onOpenSpace,
+  onOpenAdmin,
+  counts,
+  profileName,
+  isAdmin,
+}: Props) {
   const [mention, setMention] = useState<Mention>('csp')
   const [practiceOpen, setPracticeOpen] = useState(false)
   const [themes, setThemes] = useState<Theme[]>(THEMES)
@@ -29,9 +39,16 @@ export default function Home({ onStartExam, onStartPractice, onOpenSpace, counts
           <span className="avatar">{profileName.charAt(0).toUpperCase()}</span>
           {profileName}
         </span>
-        <button className="link-btn" onClick={onOpenSpace}>
-          🔒 Mon espace privé
-        </button>
+        <span className="profile-bar-links">
+          {isAdmin && (
+            <button className="link-btn" onClick={onOpenAdmin}>
+              🛠️ Panneau admin
+            </button>
+          )}
+          <button className="link-btn" onClick={onOpenSpace}>
+            🔒 Mon espace privé
+          </button>
+        </span>
       </div>
 
       <div className="hero">

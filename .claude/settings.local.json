@@ -18,7 +18,12 @@
       "Bash(python3 gen_societe.py)",
       "Bash(echo \"EXIT:$?\")",
       "Bash(gh auth *)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git push *)",
+      "Bash(vercel whoami *)",
+      "Bash(git check-ignore *)"
     ]
   }
 }
