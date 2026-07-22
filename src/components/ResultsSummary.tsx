@@ -8,10 +8,12 @@ interface Props {
   questions: PreparedQuestion[]
   answers: (number | null)[]
   mode: 'exam' | 'practice'
+  saved: boolean
   onBackHome: () => void
+  onGoToAuth: () => void
 }
 
-export default function ResultsSummary({ questions, answers, mode, onBackHome }: Props) {
+export default function ResultsSummary({ questions, answers, mode, saved, onBackHome, onGoToAuth }: Props) {
   const [showReview, setShowReview] = useState(false)
   const total = questions.length
   const correct = answers.filter((a, i) => a !== null && a === questions[i].displayCorrectIndex).length
@@ -31,6 +33,18 @@ export default function ResultsSummary({ questions, answers, mode, onBackHome }:
 
   return (
     <div className="results">
+      {!saved && (
+        <p className="disclaimer trial-banner">
+          <span className="disclaimer-icon">📌</span>
+          <span>
+            Ce résultat n'a pas été sauvegardé (mode essai).{' '}
+            <button className="inline-link" onClick={onGoToAuth}>
+              Créez un compte gratuit
+            </button>{' '}
+            pour garder votre historique et suivre votre progression.
+          </span>
+        </p>
+      )}
       <div className={`score-banner ${mode === 'exam' ? (passed ? 'pass' : 'fail') : ''}`}>
         <div
           className="score-ring"

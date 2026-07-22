@@ -17,9 +17,17 @@ type Screen =
   | { name: 'home' }
   | { name: 'exam'; mention: Mention; questions: PreparedQuestion[] }
   | { name: 'practice'; mention: Mention; questions: PreparedQuestion[] }
-  | { name: 'results'; mode: 'exam' | 'practice'; mention: Mention; questions: PreparedQuestion[]; answers: (number | null)[] }
+  | {
+      name: 'results'
+      mode: 'exam' | 'practice'
+      mention: Mention
+      questions: PreparedQuestion[]
+      answers: (number | null)[]
+      saved: boolean
+    }
   | { name: 'space' }
   | { name: 'admin' }
+  | { name: 'auth' }
 
 export default function App() {
   const [authChecked, setAuthChecked] = useState(false)
@@ -48,7 +56,7 @@ export default function App() {
     })
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserId(session?.user.id ?? null)
-      setScreen({ name: 'home' })
+      if (session) setScreen({ name: 'home' })
     })
     return () => sub.subscription.unsubscribe()
   }, [])
@@ -63,26 +71,10 @@ export default function App() {
     getHistory(userId).then(setHistory)
   }, [userId])
 
-  if (!isSupabaseConfigured) {
-    return (
-      <div className="app">
-        <AuthGate />
-      </div>
-    )
-  }
-
   if (!authChecked) {
     return (
       <div className="app">
         <p className="empty-state">Chargement…</p>
-      </div>
-    )
-  }
-
-  if (!userId || !profile) {
-    return (
-      <div className="app">
-        <AuthGate />
       </div>
     )
   }
@@ -103,7 +95,6 @@ export default function App() {
     questions: PreparedQuestion[],
     answers: (number | null)[],
   ) {
-    if (!userId) return
     const correct = answers.filter((a, i) => a !== null && a === questions[i].displayCorrectIndex).length
     const byTheme: AttemptRecord['byTheme'] = {}
     questions.forEach((q, i) => {
@@ -112,21 +103,27 @@ export default function App() {
       if (answers[i] === q.displayCorrectIndex) entry.correct += 1
       byTheme[q.theme] = entry
     })
-    await saveAttempt(userId, { mention, mode, total: questions.length, correct, byTheme })
-    setHistory(await getHistory(userId))
-    setScreen({ name: 'results', mode, mention, questions, answers })
+    let saved = false
+    if (userId) {
+      await saveAttempt(userId, { mention, mode, total: questions.length, correct, byTheme })
+      setHistory(await getHistory(userId))
+      saved = true
+    }
+    setScreen({ name: 'results', mode, mention, questions, answers, saved })
   }
+
+  const loggedIn = isSupabaseConfigured && userId && profile
 
   return (
     <div className="app">
       {screen.name === 'home' && (
         <Home
           counts={counts}
-          profileName={profile.display_name}
-          isAdmin={profile.is_admin}
+          profileName={loggedIn ? profile.display_name : null}
+          isAdmin={loggedIn ? profile.is_admin : false}
           onStartExam={startExam}
           onStartPractice={startPractice}
-          onOpenSpace={() => setScreen({ name: 'space' })}
+          onOpenSpace={() => (loggedIn ? setScreen({ name: 'space' }) : setScreen({ name: 'auth' }))}
           onOpenAdmin={() => setScreen({ name: 'admin' })}
         />
       )}
@@ -151,27 +148,34 @@ export default function App() {
           questions={screen.questions}
           answers={screen.answers}
           mode={screen.mode}
+          saved={screen.saved}
           onBackHome={() => setScreen({ name: 'home' })}
+          onGoToAuth={() => setScreen({ name: 'auth' })}
         />
       )}
 
-      {screen.name === 'space' && (
-        <PrivateSpace
-          profile={profile}
-          history={history}
-          onBackHome={() => setScreen({ name: 'home' })}
-          onCleared={() => setHistory([])}
-          onProfileRenamed={async (name) => {
-            await updateDisplayName(profile.id, name)
-            setProfile({ ...profile, display_name: name })
-          }}
-          onSignOut={async () => {
-            await signOut()
-          }}
-        />
-      )}
+      {screen.name === 'auth' && !loggedIn && <AuthGate onBackHome={() => setScreen({ name: 'home' })} />}
 
-      {screen.name === 'admin' && profile.is_admin && (
+      {screen.name === 'space' &&
+        (loggedIn ? (
+          <PrivateSpace
+            profile={profile}
+            history={history}
+            onBackHome={() => setScreen({ name: 'home' })}
+            onCleared={() => setHistory([])}
+            onProfileRenamed={async (name) => {
+              await updateDisplayName(profile.id, name)
+              setProfile({ ...profile, display_name: name })
+            }}
+            onSignOut={async () => {
+              await signOut()
+            }}
+          />
+        ) : (
+          <AuthGate onBackHome={() => setScreen({ name: 'home' })} />
+        ))}
+
+      {screen.name === 'admin' && loggedIn && profile.is_admin && (
         <AdminPanel onBackHome={() => setScreen({ name: 'home' })} />
       )}
     </div>

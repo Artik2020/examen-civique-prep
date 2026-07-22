@@ -4,7 +4,11 @@ import { signIn, signUp } from '../utils/auth'
 
 type Mode = 'login' | 'signup'
 
-export default function AuthGate() {
+interface Props {
+  onBackHome?: () => void
+}
+
+export default function AuthGate({ onBackHome }: Props) {
   const [mode, setMode] = useState<Mode>('login')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -89,6 +93,11 @@ export default function AuthGate() {
         >
           Retour à la connexion
         </button>
+        {onBackHome && (
+          <button className="link-btn" onClick={onBackHome}>
+            ← Continuer sans compte (mode essai)
+          </button>
+        )}
       </div>
     )
   }
@@ -151,6 +160,12 @@ export default function AuthGate() {
           {mode === 'login' ? "Pas encore de compte ? S'inscrire" : 'Déjà un compte ? Se connecter'}
         </button>
       </div>
+
+      {onBackHome && (
+        <button className="link-btn" onClick={onBackHome}>
+          ← Continuer sans compte (mode essai)
+        </button>
+      )}
     </div>
   )
 }

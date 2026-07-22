@@ -11,7 +11,7 @@ interface Props {
   onOpenSpace: () => void
   onOpenAdmin: () => void
   counts: Record<Mention, number>
-  profileName: string
+  profileName: string | null
   isAdmin: boolean
 }
 
@@ -35,10 +35,14 @@ export default function Home({
   return (
     <div className="home">
       <div className="profile-bar">
-        <span className="profile-chip">
-          <span className="avatar">{profileName.charAt(0).toUpperCase()}</span>
-          {profileName}
-        </span>
+        {profileName ? (
+          <span className="profile-chip">
+            <span className="avatar">{profileName.charAt(0).toUpperCase()}</span>
+            {profileName}
+          </span>
+        ) : (
+          <span className="trial-chip">🔓 Mode essai</span>
+        )}
         <span className="profile-bar-links">
           {isAdmin && (
             <button className="link-btn" onClick={onOpenAdmin}>
@@ -46,10 +50,24 @@ export default function Home({
             </button>
           )}
           <button className="link-btn" onClick={onOpenSpace}>
-            🔒 Mon espace privé
+            {profileName ? '🔒 Mon espace privé' : '🔑 Se connecter'}
           </button>
         </span>
       </div>
+
+      {!profileName && (
+        <p className="disclaimer trial-banner">
+          <span className="disclaimer-icon">🔓</span>
+          <span>
+            Vous testez l'application sans compte : vous pouvez faire des examens blancs et vous
+            entraîner librement. Vos résultats ne seront pas sauvegardés —{' '}
+            <button className="inline-link" onClick={onOpenSpace}>
+              créez un compte gratuit
+            </button>{' '}
+            pour garder votre historique et suivre votre progression.
+          </span>
+        </p>
+      )}
 
       <div className="hero">
         <h1>🇫🇷 Examen civique</h1>
