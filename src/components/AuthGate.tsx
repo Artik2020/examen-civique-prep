@@ -13,6 +13,7 @@ export default function AuthGate({ onBackHome }: Props) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmationSent, setConfirmationSent] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -108,7 +109,9 @@ export default function AuthGate({ onBackHome }: Props) {
         <div className="gate-lock">🔒</div>
         <h1>Espace privé d'étudiant</h1>
         <p className="hero-subtitle">
-          {mode === 'login' ? 'Connectez-vous pour retrouver votre progression.' : 'Créez votre compte pour commencer.'}
+          {mode === 'login'
+            ? 'Connectez-vous pour retrouver votre progression.'
+            : 'Créez votre compte gratuit pour sauvegarder votre progression.'}
         </p>
       </div>
 
@@ -121,44 +124,84 @@ export default function AuthGate({ onBackHome }: Props) {
       </p>
 
       <div className="card">
-        <h2>{mode === 'login' ? 'Se connecter' : 'Créer un compte'}</h2>
-        <div className="auth-form">
-          {mode === 'signup' && (
-            <input
-              type="text"
-              placeholder="Votre prénom"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          )}
-          <input
-            type="email"
-            placeholder="Adresse email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && submit()}
-          />
-          <input
-            type="password"
-            placeholder="Mot de passe"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && submit()}
-          />
-          {error && <p className="auth-error">{error}</p>}
-          <button className="primary" disabled={loading} onClick={submit}>
-            {loading ? 'Un instant…' : mode === 'login' ? 'Se connecter' : 'Créer mon espace'}
+        <div className="auth-tabs">
+          <button
+            type="button"
+            className={`auth-tab ${mode === 'login' ? 'active' : ''}`}
+            onClick={() => {
+              setMode('login')
+              setError(null)
+            }}
+          >
+            Se connecter
+          </button>
+          <button
+            type="button"
+            className={`auth-tab ${mode === 'signup' ? 'active' : ''}`}
+            onClick={() => {
+              setMode('signup')
+              setError(null)
+            }}
+          >
+            S'inscrire
           </button>
         </div>
-        <button
-          className="link-btn"
-          onClick={() => {
-            setMode(mode === 'login' ? 'signup' : 'login')
-            setError(null)
-          }}
-        >
-          {mode === 'login' ? "Pas encore de compte ? S'inscrire" : 'Déjà un compte ? Se connecter'}
-        </button>
+
+        <div className="auth-form">
+          {mode === 'signup' && (
+            <div className="input-icon-wrap">
+              <span className="input-icon">🙂</span>
+              <input
+                type="text"
+                placeholder="Votre prénom"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+          )}
+          <div className="input-icon-wrap">
+            <span className="input-icon">📧</span>
+            <input
+              type="email"
+              placeholder="Adresse email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && submit()}
+            />
+          </div>
+          <div className="input-icon-wrap">
+            <span className="input-icon">🔑</span>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Mot de passe"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && submit()}
+            />
+            <button
+              type="button"
+              className="input-toggle"
+              onClick={() => setShowPassword((s) => !s)}
+              aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            >
+              {showPassword ? '🙈' : '👁️'}
+            </button>
+          </div>
+          {error && (
+            <p className="auth-error">
+              <span>⚠️</span> {error}
+            </p>
+          )}
+          <button className="primary" disabled={loading} onClick={submit}>
+            {loading ? (
+              <span className="btn-spinner" />
+            ) : mode === 'login' ? (
+              'Se connecter →'
+            ) : (
+              'Créer mon espace →'
+            )}
+          </button>
+        </div>
       </div>
 
       {onBackHome && (

@@ -134,6 +134,13 @@ h2 {
 
 .trial-banner {
   margin-bottom: 20px;
+  background: #eef1fb;
+  border-color: var(--blue);
+  color: var(--blue-dark);
+}
+
+.trial-banner .inline-link {
+  color: var(--blue-dark);
 }
 
 .inline-link {
@@ -842,6 +849,7 @@ button.link-btn.danger {
   border: 1px solid var(--border);
   background: white;
   color: var(--text);
+  width: 100%;
 }
 
 .new-profile-row input:focus,
@@ -859,10 +867,87 @@ button.link-btn.danger {
   margin-bottom: 10px;
 }
 
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  margin-bottom: 16px;
+}
+
+.auth-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 9px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.auth-tab.active {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.input-icon-wrap {
+  position: relative;
+}
+
+.input-icon-wrap input {
+  padding-left: 38px;
+  padding-right: 38px;
+}
+
+.input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.6;
+  font-size: 0.95rem;
+  pointer-events: none;
+}
+
+.input-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
 .auth-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--red);
   font-size: 0.88rem;
   margin: 0;
+}
+
+.btn-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .profile-card .profile-summary {
@@ -960,6 +1045,16 @@ button.link-btn.danger {
     background: #3a2f0b;
     border-color: #6b5900;
     color: #f0d878;
+  }
+
+  .trial-banner {
+    background: #1e2554;
+    border-color: var(--blue);
+    color: #b9c2f0;
+  }
+
+  .trial-banner .inline-link {
+    color: #b9c2f0;
   }
 
   .confirm-box {
