@@ -12,7 +12,13 @@
       "Bash(npm -v)",
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(python3 gen.py)",
+      "Bash(npx tsc *)",
+      "Bash(python3 gen_societe.py)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(gh auth *)",
+      "Bash(git rm *)"
     ]
   }
 }

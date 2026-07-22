@@ -1,147 +1,135 @@
-import { useState, useEffect, useMemo } from 'react'
-import type { Filters, Progress } from './types'
-import { loadProgress, saveProgress, clearProgress } from './utils/storage'
-import { applyFilters, shuffle } from './utils/filters'
-import { allQuestions } from './data/index'
-import CountryNav from './components/CountryNav'
-import FilterPanel from './components/FilterPanel'
-import QuestionCard from './components/QuestionCard'
-import Navigation from './components/Navigation'
-import StatsPanel from './components/StatsPanel'
+import { useMemo, useState } from 'react'
+import type { Mention, Theme } from './types'
+import { allQuestions } from './data'
+import { buildExam, buildPracticeSet, questionsForMention, type PreparedQuestion } from './utils/quizEngine'
+import { getHistory, saveAttempt, type AttemptRecord } from './utils/storage'
+import { clearActiveProfile, getActiveProfile, type Profile } from './utils/profiles'
+import ProfileGate from './components/ProfileGate'
+import Home from './components/Home'
+import ExamRunner from './components/ExamRunner'
+import PracticeRunner from './components/PracticeRunner'
+import ResultsSummary from './components/ResultsSummary'
+import PrivateSpace from './components/PrivateSpace'
 
-const EMPTY_FILTERS: Filters = {
-  country: '',
-  region: '',
-  topic: '',
-  difficulty: '',
-  weakOnly: false,
-}
+type Screen =
+  | { name: 'home' }
+  | { name: 'exam'; mention: Mention; questions: PreparedQuestion[] }
+  | { name: 'practice'; mention: Mention; questions: PreparedQuestion[] }
+  | { name: 'results'; mode: 'exam' | 'practice'; mention: Mention; questions: PreparedQuestion[]; answers: (number | null)[] }
+  | { name: 'space' }
 
 export default function App() {
-  const [progress, setProgress] = useState<Progress>(loadProgress)
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
-  const [queue, setQueue] = useState(allQuestions)
-  const [cursor, setCursor] = useState(0)
+  const [profile, setProfile] = useState<Profile | null>(() => getActiveProfile())
+  const [screen, setScreen] = useState<Screen>({ name: 'home' })
+  const [history, setHistory] = useState<AttemptRecord[]>(() => (profile ? getHistory(profile.id) : []))
 
-  const filtered = useMemo(
-    () => applyFilters(allQuestions, filters, progress.weak),
-    [filters, progress.weak]
-  )
-
-  useEffect(() => {
-    setQueue(filtered)
-    setCursor(0)
-  }, [filtered])
-
-  const current = queue[cursor] ?? null
-
-  function handleAnswer(correct: boolean) {
-    if (!current) return
-    setProgress(prev => {
-      const next: Progress = {
-        attempted: new Set([...prev.attempted, current.id]),
-        correct: correct ? new Set([...prev.correct, current.id]) : prev.correct,
-        weak: correct
-          ? new Set([...prev.weak].filter(id => id !== current.id))
-          : new Set([...prev.weak, current.id]),
-      }
-      saveProgress(next)
-      return next
+  const counts = useMemo(() => {
+    const mentions: Mention[] = ['csp', 'cr', 'naturalisation']
+    const result = {} as Record<Mention, number>
+    mentions.forEach((m) => {
+      result[m] = questionsForMention(allQuestions, m).length
     })
+    return result
+  }, [])
+
+  if (!profile) {
+    return (
+      <div className="app">
+        <ProfileGate
+          onEnter={(p) => {
+            setProfile(p)
+            setHistory(getHistory(p.id))
+            setScreen({ name: 'home' })
+          }}
+        />
+      </div>
+    )
   }
 
-  function handleToggleWeak() {
-    if (!current) return
-    setProgress(prev => {
-      const weak = new Set(prev.weak)
-      if (weak.has(current.id)) weak.delete(current.id)
-      else weak.add(current.id)
-      const next = { ...prev, weak }
-      saveProgress(next)
-      return next
+  function startExam(mention: Mention) {
+    const pool = questionsForMention(allQuestions, mention)
+    setScreen({ name: 'exam', mention, questions: buildExam(pool) })
+  }
+
+  function startPractice(mention: Mention, themes: Theme[]) {
+    const pool = questionsForMention(allQuestions, mention).filter((q) => themes.includes(q.theme))
+    setScreen({ name: 'practice', mention, questions: buildPracticeSet(pool) })
+  }
+
+  function finishRun(mode: 'exam' | 'practice', mention: Mention, questions: PreparedQuestion[], answers: (number | null)[]) {
+    if (!profile) return
+    const correct = answers.filter((a, i) => a !== null && a === questions[i].displayCorrectIndex).length
+    const byTheme: AttemptRecord['byTheme'] = {}
+    questions.forEach((q, i) => {
+      const entry = byTheme[q.theme] ?? { total: 0, correct: 0 }
+      entry.total += 1
+      if (answers[i] === q.displayCorrectIndex) entry.correct += 1
+      byTheme[q.theme] = entry
     })
-  }
-
-  function handleReset() {
-    if (!confirm('Reset all progress, scores, and weak questions? This cannot be undone.')) return
-    clearProgress()
-    setProgress({ attempted: new Set(), correct: new Set(), weak: new Set() })
-  }
-
-  function handleShuffle() {
-    setQueue(q => shuffle(q))
-    setCursor(0)
-  }
-
-  function handleCountrySelect(country: string) {
-    setFilters(f => ({ ...f, country, region: '' }))
-  }
-
-  function handleFiltersChange(f: Filters) {
-    setFilters(f)
+    const record: AttemptRecord = {
+      id: `${Date.now()}`,
+      date: new Date().toISOString(),
+      mention,
+      mode,
+      total: questions.length,
+      correct,
+      byTheme,
+    }
+    saveAttempt(profile.id, record)
+    setHistory(getHistory(profile.id))
+    setScreen({ name: 'results', mode, mention, questions, answers })
   }
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-title">
-          <h1>WSET D3</h1>
-          <span className="header-subtitle">Wines of the World — Revision</span>
-        </div>
-        <StatsPanel
-          total={allQuestions.length}
-          filtered={queue.length}
-          progress={progress}
-          onReset={handleReset}
+      {screen.name === 'home' && (
+        <Home
+          counts={counts}
+          profileName={profile.name}
+          onStartExam={startExam}
+          onStartPractice={startPractice}
+          onOpenSpace={() => setScreen({ name: 'space' })}
         />
-      </header>
+      )}
 
-      <CountryNav
-        questions={allQuestions}
-        selected={filters.country}
-        onSelect={handleCountrySelect}
-      />
-
-      <main className="app-main">
-        <FilterPanel
-          questions={allQuestions}
-          filters={filters}
-          onChange={handleFiltersChange}
-          onShuffle={handleShuffle}
-          weakCount={progress.weak.size}
+      {screen.name === 'exam' && (
+        <ExamRunner
+          questions={screen.questions}
+          onFinish={(answers) => finishRun('exam', screen.mention, screen.questions, answers)}
         />
+      )}
 
-        {queue.length === 0 ? (
-          <div className="empty-state">
-            <p>No questions match your current filters.</p>
-            <button className="btn btn-primary" onClick={() => setFilters(EMPTY_FILTERS)}>
-              Clear Filters
-            </button>
-          </div>
-        ) : current ? (
-          <>
-            <Navigation
-              current={cursor}
-              total={queue.length}
-              onPrev={() => setCursor(c => Math.max(0, c - 1))}
-              onNext={() => setCursor(c => Math.min(queue.length - 1, c + 1))}
-            />
-            <QuestionCard
-              key={current.id}
-              question={current}
-              isWeak={progress.weak.has(current.id)}
-              onAnswer={handleAnswer}
-              onToggleWeak={handleToggleWeak}
-            />
-            <Navigation
-              current={cursor}
-              total={queue.length}
-              onPrev={() => setCursor(c => Math.max(0, c - 1))}
-              onNext={() => setCursor(c => Math.min(queue.length - 1, c + 1))}
-            />
-          </>
-        ) : null}
-      </main>
+      {screen.name === 'practice' && (
+        <PracticeRunner
+          questions={screen.questions}
+          onFinish={(answers) => finishRun('practice', screen.mention, screen.questions, answers)}
+          onExit={() => setScreen({ name: 'home' })}
+        />
+      )}
+
+      {screen.name === 'results' && (
+        <ResultsSummary
+          questions={screen.questions}
+          answers={screen.answers}
+          mode={screen.mode}
+          onBackHome={() => setScreen({ name: 'home' })}
+        />
+      )}
+
+      {screen.name === 'space' && (
+        <PrivateSpace
+          profile={profile}
+          history={history}
+          onBackHome={() => setScreen({ name: 'home' })}
+          onCleared={() => setHistory([])}
+          onProfileRenamed={(name) => setProfile({ ...profile, name })}
+          onSwitchProfile={() => {
+            clearActiveProfile()
+            setProfile(null)
+            setScreen({ name: 'home' })
+          }}
+        />
+      )}
     </div>
   )
 }

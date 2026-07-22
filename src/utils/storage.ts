@@ -1,35 +1,35 @@
-import type { Progress, StoredProgress } from '../types'
+import type { Mention, Theme } from '../types'
 
-const KEY = 'wset_d3_progress'
+export interface AttemptRecord {
+  id: string
+  date: string
+  mention: Mention
+  mode: 'exam' | 'practice'
+  total: number
+  correct: number
+  byTheme: Partial<Record<Theme, { total: number; correct: number }>>
+}
 
-export function loadProgress(): Progress {
+function historyKey(profileId: string): string {
+  return `examen-civique-history-${profileId}`
+}
+
+export function getHistory(profileId: string): AttemptRecord[] {
   try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return empty()
-    const stored: StoredProgress = JSON.parse(raw)
-    return {
-      attempted: new Set(stored.attempted),
-      correct: new Set(stored.correct),
-      weak: new Set(stored.weak),
-    }
+    const raw = localStorage.getItem(historyKey(profileId))
+    if (!raw) return []
+    return JSON.parse(raw) as AttemptRecord[]
   } catch {
-    return empty()
+    return []
   }
 }
 
-export function saveProgress(p: Progress): void {
-  const stored: StoredProgress = {
-    attempted: [...p.attempted],
-    correct: [...p.correct],
-    weak: [...p.weak],
-  }
-  localStorage.setItem(KEY, JSON.stringify(stored))
+export function saveAttempt(profileId: string, record: AttemptRecord): void {
+  const history = getHistory(profileId)
+  history.unshift(record)
+  localStorage.setItem(historyKey(profileId), JSON.stringify(history.slice(0, 100)))
 }
 
-export function clearProgress(): void {
-  localStorage.removeItem(KEY)
-}
-
-function empty(): Progress {
-  return { attempted: new Set(), correct: new Set(), weak: new Set() }
+export function clearHistory(profileId: string): void {
+  localStorage.removeItem(historyKey(profileId))
 }

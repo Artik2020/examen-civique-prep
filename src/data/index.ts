@@ -1,36 +1,21 @@
-import type { Question } from '../types'
-import { franceQuestions } from './france'
-import { italyQuestions } from './italy'
-import { spainQuestions } from './spain'
-import { portugalQuestions } from './portugal'
-import { germanyQuestions } from './germany'
-import { austriaQuestions } from './austria'
-import { hungaryQuestions } from './hungary'
-import { greeceQuestions } from './greece'
-import { usaQuestions } from './usa'
-import { australiaQuestions } from './australia'
-import { newzealandQuestions } from './newzealand'
-import { southAfricaQuestions } from './southafrica'
-import { chileQuestions } from './chile'
-import { argentinaQuestions } from './argentina'
-import { chinaQuestions } from './china'
-import { canadaQuestions } from './canada'
+import type { QuizQuestion } from '../types'
+import { principesQuestions } from './questions.principes'
+import { droitsQuestions } from './questions.droits'
+import { societeQuestions } from './questions.societe'
+import { institutionsQuestionsA } from './questions.institutions.a'
+import { institutionsQuestionsB } from './questions.institutions.b'
+import { histoireQuestionsA } from './questions.histoire.a'
+import { histoireQuestionsB } from './questions.histoire.b'
+import { situationQuestions } from './questions.situation'
 
-export const allQuestions: Question[] = [
-  ...franceQuestions,
-  ...italyQuestions,
-  ...spainQuestions,
-  ...portugalQuestions,
-  ...germanyQuestions,
-  ...austriaQuestions,
-  ...hungaryQuestions,
-  ...greeceQuestions,
-  ...usaQuestions,
-  ...australiaQuestions,
-  ...newzealandQuestions,
-  ...southAfricaQuestions,
-  ...chileQuestions,
-  ...argentinaQuestions,
-  ...chinaQuestions,
-  ...canadaQuestions,
-]
+const knowledgeQuestions: QuizQuestion[] = [
+  ...principesQuestions,
+  ...institutionsQuestionsA,
+  ...institutionsQuestionsB,
+  ...droitsQuestions,
+  ...histoireQuestionsA,
+  ...histoireQuestionsB,
+  ...societeQuestions,
+].map((q) => ({ ...q, kind: 'connaissance' as const }))
+
+export const allQuestions: QuizQuestion[] = [...knowledgeQuestions, ...situationQuestions]
